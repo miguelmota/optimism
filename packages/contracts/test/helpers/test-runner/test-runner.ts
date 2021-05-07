@@ -72,6 +72,10 @@ export class ExecutionManagerTestRunner {
           codeHash: NON_NULL_BYTES32,
           ethAddress: '$OVM_PROXY_EOA',
         },
+        [predeploys.OVM_SafetyCache]: {
+          codeHash: NON_NULL_BYTES32,
+          ethAddress: '$OVM_SAFETY_CACHE',
+        },
       },
       contractStorage: {
         [predeploys.OVM_DeployerWhitelist]: {
@@ -80,10 +84,20 @@ export class ExecutionManagerTestRunner {
             value: ethers.constants.HashZero,
           },
         },
+        [predeploys.OVM_SafetyCache]: {
+          [ethers.constants.HashZero]: {
+            getStorageXOR: true,
+            value: '$OVM_SAFETY_CACHE'
+          },
+        }
       },
       verifiedContractStorage: {
         [predeploys.OVM_DeployerWhitelist]: {
           '0x0000000000000000000000000000000000000000000000000000000000000000': true,
+        },
+        [predeploys.OVM_SafetyCache]: {
+          [ethers.constants.HashZero]: true,
+          ['0x0000000000000000000000000000000000000000000000000000000000000001']: true,
         },
       },
     },
@@ -219,6 +233,16 @@ export class ExecutionManagerTestRunner {
       this.contracts.OVM_SafetyChecker.address
     )
 
+    const SafetyCache = await getContractFactory(
+      'OVM_SafetyCache',
+      AddressManager.signer,
+      true
+    ).deploy(
+      AddressManager.address
+    )
+
+    this.contracts.OVM_SafetyCache = SafetyCache
+
     const DeployerWhitelist = await getContractFactory(
       'OVM_DeployerWhitelist',
       AddressManager.signer,
@@ -278,6 +302,8 @@ export class ExecutionManagerTestRunner {
         return this.contracts.OVM_StateManager.address
       } else if (kv === '$OVM_SAFETY_CHECKER') {
         return this.contracts.OVM_SafetyChecker.address
+      } else if (kv === '$OVM_SAFETY_CACHE') {
+        return this.contracts.OVM_SafetyCache.address
       } else if (kv === '$OVM_CALL_HELPER') {
         return this.contracts.Helper_TestRunner.address
       } else if (kv === '$OVM_DEPLOYER_WHITELIST') {

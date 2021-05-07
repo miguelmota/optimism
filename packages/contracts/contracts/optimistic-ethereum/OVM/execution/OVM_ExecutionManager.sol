@@ -12,10 +12,10 @@ import { Lib_ErrorUtils } from "../../libraries/utils/Lib_ErrorUtils.sol";
 /* Interface Imports */
 import { iOVM_ExecutionManager } from "../../iOVM/execution/iOVM_ExecutionManager.sol";
 import { iOVM_StateManager } from "../../iOVM/execution/iOVM_StateManager.sol";
-import { iOVM_SafetyChecker } from "../../iOVM/execution/iOVM_SafetyChecker.sol";
 
 /* Contract Imports */
 import { OVM_DeployerWhitelist } from "../predeploys/OVM_DeployerWhitelist.sol";
+import { OVM_SafetyCache } from "../predeploys/OVM_SafetyCache.sol";
 
 /**
  * @title OVM_ExecutionManager
@@ -38,7 +38,6 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
      * External Contract References *
      ********************************/
 
-    iOVM_SafetyChecker internal ovmSafetyChecker;
     iOVM_StateManager internal ovmStateManager;
 
 
@@ -86,7 +85,6 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
     )
         Lib_AddressResolver(_libAddressManager)
     {
-        ovmSafetyChecker = iOVM_SafetyChecker(resolve("OVM_SafetyChecker"));
         gasMeterConfig = _gasMeterConfig;
         globalContext = _globalContext;
         _resetContext();
@@ -831,9 +829,9 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
         return gasMeterConfig.maxTransactionGasLimit;
     }
 
-    /********************************************
-     * Public Functions: Deployment Whitelisting *
-     ********************************************/
+    /*****************************************
+     * Internal Functions: Deployment Checks *
+     *****************************************/
 
     /**
      * Checks whether the given address is on the whitelist to ovmCREATE/ovmCREATE2, and reverts if not.
@@ -857,6 +855,30 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
             _revertWithFlag(RevertFlag.CREATOR_NOT_ALLOWED);
         }
     }
+
+
+    function _checkBytecodeSafety(
+        bytes memory _code
+    )
+        internal
+        returns(
+            bool
+        )
+    {
+        // From an OVM semantics perspective, this will appear identical to
+        // the deployer ovmCALLing the SafetyCache.  This is fine--in a sense, we are forcing them to.
+        (bool success, bytes memory data) = ovmCALL(
+            gasleft(),
+            0x420000000000000000000000000000000000000c,
+            abi.encodeWithSignature("checkAndRegisterSafeBytecode(bytes)", _code)
+        );
+        bool isSafe = abi.decode(data, (bool));
+
+        if (!isSafe || !success) {
+            _revertWithFlag(RevertFlag.UNSAFE_BYTECODE);
+        }
+    }
+
 
     /********************************************
      * Internal Functions: Contract Interaction *
@@ -1110,8 +1132,8 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
             );
         }
 
-        // Check the creation bytecode against the OVM_SafetyChecker.
-        if (ovmSafetyChecker.isBytecodeSafe(_creationCode) == false) {
+        // Check the creation bytecode against the OVM_SafetyChecker and Cache.
+        if (_checkBytecodeSafety(_creationCode) == false) {
             _revertWithFlag(
                 RevertFlag.UNSAFE_BYTECODE,
                 Lib_ErrorUtils.encodeRevertString("Contract creation code contains unsafe opcodes. Did you use the right compiler or pass an unsafe constructor argument?")
@@ -1137,7 +1159,7 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
         // Again simply checking that the deployed code is safe too. Contracts can generate
         // arbitrary deployment code, so there's no easy way to analyze this beforehand.
         bytes memory deployedCode = Lib_EthUtils.getCode(ethAddress);
-        if (ovmSafetyChecker.isBytecodeSafe(deployedCode) == false) {
+        if (_checkBytecodeSafety(deployedCode) == false) {
             _revertWithFlag(
                 RevertFlag.UNSAFE_BYTECODE,
                 Lib_ErrorUtils.encodeRevertString("Constructor attempted to deploy unsafe bytecode.")

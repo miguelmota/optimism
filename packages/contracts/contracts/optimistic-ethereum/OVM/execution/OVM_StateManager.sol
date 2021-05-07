@@ -7,6 +7,7 @@ import { Lib_OVMCodec } from "../../libraries/codec/Lib_OVMCodec.sol";
 
 /* Interface Imports */
 import { iOVM_StateManager } from "../../iOVM/execution/iOVM_StateManager.sol";
+import "hardhat/console.sol";
 
 /**
  * @title OVM_StateManager
@@ -176,6 +177,9 @@ contract OVM_StateManager is iOVM_StateManager {
             bool
         )
     {
+        console.log("sm.hasaccount address:", _address);
+        console.log("sm.hasaccount codehash:");
+        console.logBytes32(accounts[_address].codeHash);
         return accounts[_address].codeHash != bytes32(0);
     }
 
