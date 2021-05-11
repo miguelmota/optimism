@@ -17,6 +17,7 @@ import { iOVM_StateManager } from "../../iOVM/execution/iOVM_StateManager.sol";
 import { OVM_DeployerWhitelist } from "../predeploys/OVM_DeployerWhitelist.sol";
 import { OVM_SafetyCache } from "../predeploys/OVM_SafetyCache.sol";
 
+
 /**
  * @title OVM_ExecutionManager
  * @dev The Execution Manager (EM) is the core of our OVM implementation, and provides a sandboxed
@@ -617,7 +618,6 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
         MessageContext memory nextMessageContext = messageContext;
         nextMessageContext.ovmCALLER = nextMessageContext.ovmADDRESS;
         nextMessageContext.ovmADDRESS = _address;
-
         return _callContract(
             nextMessageContext,
             _gasLimit,
@@ -856,7 +856,10 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
         }
     }
 
-
+    /**
+     * Checks whether the given the given bytecode is safe to run in the OVM
+     * @param _code Init or runtime bytecode.
+     */
     function _checkBytecodeSafety(
         bytes memory _code
     )
@@ -867,16 +870,18 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
     {
         // From an OVM semantics perspective, this will appear identical to
         // the deployer ovmCALLing the SafetyCache.  This is fine--in a sense, we are forcing them to.
+        bytes32 codehash = keccak256(_code);
+
         (bool success, bytes memory data) = ovmCALL(
             gasleft(),
             0x420000000000000000000000000000000000000c,
-            abi.encodeWithSignature("checkAndRegisterSafeBytecode(bytes)", _code)
+            abi.encodeWithSelector(
+                OVM_SafetyCache.checkAndRegisterSafeBytecode.selector,
+                _code
+            )
         );
         bool isSafe = abi.decode(data, (bool));
-
-        if (!isSafe || !success) {
-            _revertWithFlag(RevertFlag.UNSAFE_BYTECODE);
-        }
+        return isSafe;
     }
 
 
@@ -1015,7 +1020,6 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
         // behavior can be controlled. In particular, we enforce that flags are passed through
         // revert data as to retrieve execution metadata that would normally be reverted out of
         // existence.
-
         bool success;
         bytes memory returndata;
         if (_isCreate) {
@@ -1050,7 +1054,6 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
                 uint256 ovmGasRefund,
                 bytes memory returndataFromFlag
             ) = _decodeRevertData(returndata);
-
             // INVALID_STATE_ACCESS is the only flag that triggers an immediate abort of the
             // parent EVM message. This behavior is necessary because INVALID_STATE_ACCESS must
             // halt any further transaction execution that could impact the execution result.

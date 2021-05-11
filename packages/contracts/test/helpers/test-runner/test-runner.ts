@@ -38,11 +38,13 @@ import {
 import { getStorageXOR } from '../'
 import { UNSAFE_BYTECODE } from '../dummy'
 import { getContractFactory, predeploys } from '../../../src'
+import { cachePrestate } from './cache-prestate'
 
 export class ExecutionManagerTestRunner {
   private snapshot: string
   private contracts: {
     OVM_SafetyChecker: Contract
+    OVM_SafetyCache: Contract
     OVM_StateManager: ModifiableContract
     OVM_ExecutionManager: ModifiableContract
     Helper_TestRunner: Contract
@@ -51,6 +53,7 @@ export class ExecutionManagerTestRunner {
     OVM_ProxyEOA: Contract
   } = {
     OVM_SafetyChecker: undefined,
+    OVM_SafetyCache: undefined,
     OVM_StateManager: undefined,
     OVM_ExecutionManager: undefined,
     Helper_TestRunner: undefined,
@@ -76,10 +79,19 @@ export class ExecutionManagerTestRunner {
           codeHash: NON_NULL_BYTES32,
           ethAddress: '$OVM_SAFETY_CACHE',
         },
+        $OVM_SAFETY_CHECKER: {
+          codeHash: NON_NULL_BYTES32,
+          ethAddress: '$OVM_SAFETY_CHECKER',
+        },
+        // Address of hardhat/console.sol, comes in handy sometimes
+        ['0x000000000000000000636F6e736F6c652e6c6f67']: {
+          codeHash: NON_NULL_BYTES32,
+          ethAddress: '0x000000000000000000636F6e736F6c652e6c6f67',
+        },
       },
       contractStorage: {
         [predeploys.OVM_DeployerWhitelist]: {
-          '0x0000000000000000000000000000000000000000000000000000000000000000': {
+          [ethers.constants.HashZero]: {
             getStorageXOR: true,
             value: ethers.constants.HashZero,
           },
@@ -87,17 +99,16 @@ export class ExecutionManagerTestRunner {
         [predeploys.OVM_SafetyCache]: {
           [ethers.constants.HashZero]: {
             getStorageXOR: true,
-            value: '$OVM_SAFETY_CACHE'
+            value: '$OVM_SAFETY_CHECKER',
           },
-        }
+        },
       },
       verifiedContractStorage: {
         [predeploys.OVM_DeployerWhitelist]: {
-          '0x0000000000000000000000000000000000000000000000000000000000000000': true,
+          [ethers.constants.HashZero]: true,
         },
         [predeploys.OVM_SafetyCache]: {
           [ethers.constants.HashZero]: true,
-          ['0x0000000000000000000000000000000000000000000000000000000000000001']: true,
         },
       },
     },
@@ -112,6 +123,7 @@ export class ExecutionManagerTestRunner {
     // tslint:disable-next-line:ban-comma-operator
     ;(test.preState = merge(
       cloneDeep(this.defaultPreState),
+      cloneDeep(cachePrestate),
       cloneDeep(test.preState)
     )),
       (test.postState = test.postState || {})
@@ -237,9 +249,7 @@ export class ExecutionManagerTestRunner {
       'OVM_SafetyCache',
       AddressManager.signer,
       true
-    ).deploy(
-      AddressManager.address
-    )
+    ).deploy(AddressManager.address)
 
     this.contracts.OVM_SafetyCache = SafetyCache
 

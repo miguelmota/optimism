@@ -7,8 +7,6 @@ import { iOVM_SafetyCache } from "../../iOVM/predeploys/iOVM_SafetyCache.sol";
 /* Inherited Interface Imports */
 import { iOVM_SafetyChecker } from "../../iOVM/execution/iOVM_SafetyChecker.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title OVM_SafetyCache
  * @dev This contract implements a simple registry for caching the hash of any bytecode strings which have
@@ -67,8 +65,7 @@ contract OVM_SafetyCache is iOVM_SafetyCache {
         returns (
             bool
     ) {
-        console.log('We are in the cache!');
-        bytes32 codehash = keccak256(abi.encode(_code));
+        bytes32 codehash = keccak256(_code);
         if(isSafeCodehash[codehash] == true) {
             return true;
         }
