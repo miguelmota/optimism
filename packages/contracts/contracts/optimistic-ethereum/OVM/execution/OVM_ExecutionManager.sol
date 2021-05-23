@@ -870,8 +870,6 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
     {
         // From an OVM semantics perspective, this will appear identical to
         // the deployer ovmCALLing the SafetyCache.  This is fine--in a sense, we are forcing them to.
-        bytes32 codehash = keccak256(_code);
-
         (bool success, bytes memory data) = ovmCALL(
             gasleft(),
             0x420000000000000000000000000000000000000c,
@@ -880,8 +878,13 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
                 _code
             )
         );
-        bool isSafe = abi.decode(data, (bool));
-        return isSafe;
+
+        if (!success) {
+            return false;
+        }
+
+        // decodes to true if and only if safe
+        return abi.decode(data, (bool));
     }
 
 
@@ -1837,7 +1840,7 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
     /********************************
      * Internal Functions: Upgrades *
      ********************************/
-    
+
     function _isUpgrading()
         internal
         returns (
@@ -1925,8 +1928,8 @@ contract OVM_ExecutionManager is iOVM_ExecutionManager, Lib_AddressResolver {
         // Reset the ovmStateManager.
         ovmStateManager = iOVM_StateManager(address(0));
     }
-    
-    
+
+
     /*********************
      * Upgrade Functions *
      *********************/

@@ -6,7 +6,9 @@ import { ethers } from 'hardhat'
 // They were obtained using hardhat's console.log in the StateManager's getContractStorage() function.
 // They can also be predicted using Solidity's storage layout, formula: keccak256(k . p),
 // where k is the bytes32 codehash value, and p is the slot position (in this case bytes32(1)).
-export const cachePrestate = {
+// The codehash values correspond to the creation and deployed bytecode of the various contracts which are
+// deployed by other test-runner tests.
+export const safetyCachePrestate = {
   StateManager: {
     contractStorage: {
       [predeploys.OVM_SafetyCache]: {

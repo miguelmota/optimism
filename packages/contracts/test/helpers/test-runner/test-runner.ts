@@ -38,7 +38,7 @@ import {
 import { getStorageXOR } from '../'
 import { UNSAFE_BYTECODE } from '../dummy'
 import { getContractFactory, predeploys } from '../../../src'
-import { cachePrestate } from './cache-prestate'
+import { safetyCachePrestate } from './safety-cache-prestate'
 
 export class ExecutionManagerTestRunner {
   private snapshot: string
@@ -123,7 +123,7 @@ export class ExecutionManagerTestRunner {
     // tslint:disable-next-line:ban-comma-operator
     ;(test.preState = merge(
       cloneDeep(this.defaultPreState),
-      cloneDeep(cachePrestate),
+      cloneDeep(safetyCachePrestate),
       cloneDeep(test.preState)
     )),
       (test.postState = test.postState || {})
