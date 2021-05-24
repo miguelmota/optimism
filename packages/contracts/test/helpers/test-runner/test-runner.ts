@@ -79,7 +79,7 @@ export class ExecutionManagerTestRunner {
           codeHash: NON_NULL_BYTES32,
           ethAddress: '$OVM_SAFETY_CACHE',
         },
-        $OVM_SAFETY_CHECKER: {
+        [predeploys.OVM_SafetyChecker]: {
           codeHash: NON_NULL_BYTES32,
           ethAddress: '$OVM_SAFETY_CHECKER',
         },
@@ -99,7 +99,7 @@ export class ExecutionManagerTestRunner {
         [predeploys.OVM_SafetyCache]: {
           [ethers.constants.HashZero]: {
             getStorageXOR: true,
-            value: '$OVM_SAFETY_CHECKER',
+            value: predeploys.OVM_SafetyChecker,
           },
         },
       },
@@ -240,16 +240,11 @@ export class ExecutionManagerTestRunner {
 
     this.contracts.OVM_SafetyChecker = MockSafetyChecker
 
-    await AddressManager.setAddress(
-      'OVM_SafetyChecker',
-      this.contracts.OVM_SafetyChecker.address
-    )
-
     const SafetyCache = await getContractFactory(
       'OVM_SafetyCache',
       AddressManager.signer,
       true
-    ).deploy(AddressManager.address)
+    ).deploy(MockSafetyChecker.address)
 
     this.contracts.OVM_SafetyCache = SafetyCache
 
